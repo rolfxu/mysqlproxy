@@ -1,0 +1,1539 @@
+
+options {
+    STATIC = false;
+    IGNORE_CASE = true;
+    UNICODE_INPUT = true;
+//    DEBUG_LOOKAHEAD= true ;
+}
+
+
+PARSER_BEGIN(SqlParserImpl)
+
+package com.maxleap.mysqlproxy.parser;
+
+
+import com.maxleap.mysqlproxy.parser.expression.*;
+import com.maxleap.mysqlproxy.parser.schema.*;
+import com.maxleap.mysqlproxy.parser.statement.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.*;
+/**
+ * SQL parser, generated from Parser.jj by JavaCC.
+ *
+ * <p>The public wrapper for this parser is {@link SqlParser}.
+ */
+public class SqlParserImpl 
+{
+    private static final Logger LOGGER =  LoggerFactory.getLogger(SqlParserImpl.class);
+
+    // Can't use quoted literal because of a bug in how JavaCC translates
+    // backslash-backslash.
+    // \
+    private static final char BACKSLASH = 0x5c;
+    // "
+    private static final char DOUBLE_QUOTE = 0x22;
+    private static final String DQ = DOUBLE_QUOTE + "";
+    private static final String DQDQ = DQ + DQ;
+
+
+
+    public void setTabSize(int tabSize) {
+        jj_input_stream.setTabSize(tabSize);
+    }
+
+    public void switchTo(String stateName) {
+        int state = Arrays.asList(SqlParserImplTokenManager.lexStateNames)
+            .indexOf(stateName);
+        token_source.SwitchTo(state);
+    }
+}
+
+PARSER_END(SqlParserImpl)
+
+
+/***************************************
+ * Utility Codes for Semantic Analysis *
+ ***************************************/
+
+/* For Debug */
+JAVACODE
+void debug_message1() {
+    LOGGER.info("{} , {}", getToken(0).image, getToken(1).image);
+}
+/**
+ * Parses an SQL statement.
+ */
+void SqlStmt() :
+{
+    
+}
+{
+    (
+     SqlAlterStmt()
+   |
+	sqlOp()
+   |
+   { } 
+    )
+    <EOF>
+   
+    {
+        
+    }
+}
+void sqlOp():
+{
+  Expression orderBy;
+}
+{
+  sqlSelectSingle()
+   (
+     BinaryQueryOperator()
+	 sqlSelectSingle()
+   )*
+
+   
+        orderBy = OrderBy()
+    [LOOKAHEAD(2)limitClause()]
+}
+
+String BinaryQueryOperator(): { }
+{
+  <UNION>
+        [
+            <ALL> { return "UNION"; }
+        |   <DISTINCT> { return "UNION"; }
+        ]
+       { return "UNION"; }
+}
+
+void sqlSelectSingle(): { }
+{
+   SqlSelectStmt()    
+  |  SelectExpression()
+}
+
+void SqlSelectStmt() :
+{
+ List keywords = new ArrayList();
+ Expression where = null;
+}
+{
+  (
+    
+  < SELECT >
+
+  (
+      	
+        <STRAIGHT_JOIN> {
+			keywords.add(STRAIGHT_JOIN);
+        }
+    |   < HIGH_PRIORITY >{
+            keywords.add(HIGH_PRIORITY);
+        }
+       	
+    |   <DISTINCT> {
+            keywords.add(DISTINCT );
+        }
+
+    |   < SQL_SMALL_RESULT > {
+ 			keywords.add(SQL_SMALL_RESULT);
+        } 
+    |   <SQL_BIG_RESULT> {
+            keywords.add(SQL_BIG_RESULT);
+        }
+    |   <SQL_BUFFER_RESULT> {
+            keywords.add(SQL_BUFFER_RESULT);
+        }
+    |   <SQL_CALC_FOUND_ROWS> {
+            keywords.add(SQL_CALC_FOUND_ROWS);
+        }
+    |   <SQL_NO_CACHE> {
+            keywords.add(SQL_NO_CACHE);
+        }    
+    )?
+    SelectList()
+   
+   FromExpress()
+   
+   WhereClause()
+   GroupByOpt()
+   HavingOpt()
+   OrderBy()
+   [LOOKAHEAD(2)limitClause()]
+  )
+
+ 
+}
+
+void limitClause() :
+{
+	Expression start,count;
+}
+{
+          <LIMIT>
+        (
+            // MySQL-style syntax. "LIMIT start, count"
+            LOOKAHEAD(2)
+            start = UnsignedNumericLiteralOrParam()
+            [
+			LOOKAHEAD(2)
+            (
+              <COMMA> count = UnsignedNumericLiteralOrParam()
+            |
+            < OFFSET >  count = UnsignedNumericLiteralOrParam()            
+            )]
+        |
+            <ALL>
+        )
+}
+
+Expression UnsignedNumericLiteralOrParam():
+{
+  Expression e = null;
+}
+{
+  (
+        e = UnsignedNumericLiteral()
+    |
+        e = jdbcParam()
+    )
+    { return e; }
+}
+
+void FromExpress(): { }
+{
+      < FROM >
+	  TableRef()
+		(LOOKAHEAD(2)
+	 	 TableJoin()
+		)*
+		{return ;
+		}
+	|
+{ return ;}	
+}
+
+void TableJoin() : { }
+{		   
+		 <COMMA > TableRef()
+		|
+		sqlJoin()
+		{
+		  return ;
+		} 
+}
+void sqlJoin():
+{
+}
+{
+
+         Natural()
+         JoinType()
+		 TableRef()
+		 [
+	     [<AS >] IdentifierSegment()
+	     ]
+		 [ <ON>  SelectExpression()]
+}
+ 
+
+void TableRef(): { }
+
+{      LOOKAHEAD(1)
+        (
+	       ParenthesizedQueryOrCommaList()
+	       
+	     [ LOOKAHEAD(2)[<AS >] IdentifierSegment() ]
+
+	     )
+	   |
+	    (
+		     CompoundIdentifier()
+			[LOOKAHEAD(2)
+		     [<AS >] IdentifierSegment()
+		    ]
+	    )
+}
+
+
+
+Expression OrderBy():
+{
+  Expression orderBy;
+}
+{
+  <ORDER>  <BY> orderBy = OrderItem() 
+    (
+        LOOKAHEAD(2) <COMMA> orderBy = OrderItem()
+    )*
+	{return orderBy;}
+    |
+    { return null; }
+
+}
+
+
+Expression OrderItem() :
+{
+    Expression e;
+}
+{
+    e = SelectExpression()
+    (
+        <ASC>
+    |   <DESC> 
+    )?
+    {
+        return e;
+    }
+}
+Expression GroupByOpt() :
+{
+    Expression group;
+}
+{
+    <GROUP>  
+    <BY>
+      group = SelectExpression()
+      (LOOKAHEAD(< COMMA >  )
+      	< COMMA >  
+        SelectExpression()
+    )*
+    {
+      return group;
+    }
+|
+    {
+        return null;
+    }
+}
+Expression HavingOpt() :
+{
+    Expression having;
+}
+{
+    <HAVING> having = SelectExpression( ) { return having; }
+|
+    { return null; }
+}
+
+
+Expression WhereClause(): { Expression condition=null;}
+{
+  < WHERE >
+    
+    (
+  condition=   WhereConditon()
+    	 
+  	)
+  {
+        return condition;
+    }
+    |
+    {
+        return null;
+    }
+}
+
+
+Expression WhereConditon(): {Expression condition=null; }
+{
+condition = SelectExpression()
+	(
+	  LOOKAHEAD( < NOT >< IN > )
+	  (
+	  < NOT >  < IN >
+	   ParenthesizedQueryOrCommaList()
+	  )
+	|
+	LOOKAHEAD( < IN > )
+	  (
+	    < IN >
+	   ParenthesizedQueryOrCommaList()
+	  )
+   
+	|
+	  (
+	    < AND >
+	   |
+	    < OR >
+	  )
+	SelectExpression()
+	)*
+    {
+		return condition;
+    }
+}
+
+
+//select_item_list
+List  SelectList() :
+{
+    List list = new ArrayList();
+    Expression item=null;
+}
+{
+    item = SelectItem() {
+        list.add(item);
+    }
+    ( LOOKAHEAD(2)
+        <COMMA>
+        item = SelectItem()
+    )*
+    {
+        return list;
+    }
+}
+Expression SelectItem():
+{
+	Expression item=null;
+	Expression aliasName=null;
+	Alias alias = null;
+}
+{
+
+item = SelectExpression()
+    [
+        [ <AS> { alias =  new Alias();alias.setUseAs(true);} ]
+        aliasName = IdentifierSegment() {
+        	if(alias==null ) {
+				alias =  new Alias();
+				alias.setUseAs(false);
+				alias.setName(aliasName.toString());
+        	} else {
+        	  alias.setName(aliasName.toString());
+            }
+    ]
+    {
+		 SelectExpressionItem selitem = new SelectExpressionItem(item);
+         if(alias!=null)
+         selitem.setAlias(alias);
+         return selitem;
+    }
+
+	| < STAR > {
+	   
+    	return new AllColumns();
+	}
+	
+	
+}
+
+Expression SelectExpression():
+{
+	Expression express = null;
+	Expression expression2 = null;
+	Expression tmpExpression = null;
+	Expression expression3 = null;
+	Expression op=null;
+	List list = new LinkedList();
+}
+{
+  LOOKAHEAD( < EXISTS > )
+  < EXISTS > express= ParenthesizedQueryOrCommaList()
+{
+  return new ExistsExpression(express);
+}
+| 
+  
+    express  =  expression2() {
+      list.add(express);
+      }
+		
+        ( 
+         LOOKAHEAD(2) 
+		(
+		  (
+		  < BETWEEN > expression2 = expression2( )
+		  (  LOOKAHEAD(2) 
+		    < AND > expression3 = SelectExpression( )
+		  )+
+        ) {
+			Between between = new Between();
+			between.setLeftExpression(express);
+			between.setBetweenExpressionStart(expression2);
+			between.setBetweenExpressionEnd(expression3);
+			return between;
+          }
+        |  
+           op = BinaryRowOperator() {
+				list.add(op);
+           }
+          (
+        	 tmpExpression=expression2( ) {
+				 list.add(tmpExpression);
+           }
+                  |
+         expression2= jdbcParam() {list.add(expression2); }
+          )
+       )
+        )*
+    {
+		 
+       return com.maxleap.mysqlproxy.parser.utils.SqlParserUtils.toTree(list);
+    }
+   
+	
+    
+}
+
+String Natural() :
+{
+}
+{
+    <NATURAL> { return "Natural"; }
+|
+    { return null; }
+}
+Expression jdbcParam()  :
+{  
+}
+{  < HOOK >
+   { return new JdbcParameter(); }
+}
+Expression expression2():
+{String pt,prefix=null;
+Expression et;
+}
+{
+	(
+        LOOKAHEAD(1)
+        prefix = PrefixRowOperator() 
+    )*
+	(
+    	et = Expression3()
+     	| [< ANY>]
+    	et = ParenthesizedQueryOrCommaList()
+    )
+    { return et; }
+}
+
+ Expression Expression3( ) :
+{
+   Expression express = null;
+}
+{
+  express = AtomicRowExpression()
+ {
+	return express;
+  }
+}
+
+
+
+Expression ParenthesizedQueryOrCommaList() :
+{
+     Expression e=null;
+}
+{
+    <LPAREN>
+     (LOOKAHEAD(< SELECT >)
+     sqlOp()
+	 | 
+	e= WhereConditon()
+	 )
+    (
+     <COMMA>
+     e = SelectExpression()        
+    )*
+    <RPAREN>
+    {
+       return new Parenthesis(e);
+    }
+}
+
+
+ Expression AtomicRowExpression() :
+{
+   Expression express;
+}
+{
+ (
+ express= BuiltinFunctionCall()
+ |
+  LOOKAHEAD(CompoundIdentifier() <LPAREN>) 
+ express= FunctionCall()
+ |  LOOKAHEAD(2) 
+     express=  CompoundIdentifier()
+ |  
+  express = Literal() 
+ | 
+   express = CaseExpression()
+ )
+ {
+return express;
+ }
+ 
+ 
+}
+Expression FunctionCall():
+{Function function = new Function();
+ Expression funcName;Expression args;
+}
+{
+       funcName=FunctionName() { function.setName(funcName.toString());} <LPAREN> args=Args() { function.setParameters((ExpressionList)args);} < RPAREN >
+
+       {
+		 return function;
+       }
+}
+
+Expression CaseExpression():
+{
+  Expression caseIdentifier;
+}
+{
+	<CASE> 
+    [
+        caseIdentifier = SelectExpression( )
+    ]
+    (
+        <WHEN>
+          caseIdentifier = SelectExpression( )
+        <THEN >
+        caseIdentifier = SelectExpression( )  
+    )+
+
+    [
+        <ELSE> caseIdentifier = SelectExpression()
+    ]
+    <END>
+    {
+      return caseIdentifier;
+      }
+}
+
+Expression BinaryRowOperator() :
+{
+}
+{
+    // <IN> is handled as a special case
+    <EQ> { return BinaryOperators.EQUALS; }
+|   <EQ2> { return BinaryOperators.EQ2; }
+|   <AND> { return BinaryOperators.AND; }
+|   <OR> { return BinaryOperators.OR; }
+|   <GT> { return BinaryOperators.GT; }
+|   <LT> { return BinaryOperators.LT; }
+|   <LE> { return BinaryOperators.LE; }
+|   <GE> { return BinaryOperators.GE; }
+|   <NE> { return BinaryOperators.NE; }
+|   <NE2> { return BinaryOperators.NE2; }
+|   <PLUS> { return BinaryOperators.PLUS; }
+|   <MINUS> { return BinaryOperators.MINUS; }
+|   <STAR> { return BinaryOperators.MULTIPLY; }
+|   <SLASH> { return BinaryOperators.DIVIDE; }
+|   <PERCENT_REMAINDER> { return BinaryOperators.MOD;}
+|   LOOKAHEAD(2)< IS >    { return BinaryOperators.EQUALS;}
+|  < REGEXP > { return BinaryOperators.EQUALS;}
+|  < LIKE > { return BinaryOperators.EQUALS;}
+|  < NOT > < LIKE > { return BinaryOperators.EQUALS;}
+|    < IS ><NOT >  { return BinaryOperators.EQUALS;}
+| <IN> { return BinaryOperators.EQUALS;}
+}
+Expression BuiltinFunctionCall() :{Expression e=null,dt=null; }
+{       (
+		<CAST> 
+        <LPAREN> e = SelectExpression() {  }
+        <AS> dt = DataType()
+        <RPAREN> {
+          CastExpression cast = new CastExpression();
+		  cast.setLeftExpression(e);
+          cast.setType(dt);
+          return cast;
+        }
+
+      |
+         
+         (
+             
+           < CONVERT > <LPAREN> e = SelectExpression()
+        (
+          (
+          <COMMA>
+          dt = DataType()
+          )
+        |
+          < USING > IdentifierSegment()
+        )  
+        <RPAREN>
+        
+      )
+       {
+         Function function = new Function();
+         ExpressionList args = new ExpressionList();
+         function.setName("convert");
+         args.addExpression(e);
+         args.addExpression(dt);
+	    return function;
+       }
+      |  < SUM >   <LPAREN> [<DISTINCT >] [< ALL>] e = SelectExpression()< RPAREN >
+      |  < AVG >   <LPAREN> [<DISTINCT >] [< ALL>] e = SelectExpression()< RPAREN >
+      |  < BIT_AND >   <LPAREN> [< ALL>] e = SelectExpression()< RPAREN >
+      |  < BIT_OR >   <LPAREN>  [< ALL>] e = SelectExpression()< RPAREN >
+      |  < BIT_XOR >   <LPAREN>  [< ALL>] e = SelectExpression()< RPAREN >
+      | < COUNT > <LPAREN> [<DISTINCT >]   [< ALL>] (e = SelectExpression()|< STAR >) < RPAREN >
+      |  < MIN >   <LPAREN> [<DISTINCT >] [< ALL>] e = SelectExpression()< RPAREN >
+      |  < MAX >   <LPAREN> [<DISTINCT >] [< ALL>] e = SelectExpression()< RPAREN >
+      | < STD > <LPAREN>  [< ALL>] e = SelectExpression()  < RPAREN >
+      | < VARIANCE > <LPAREN>  [< ALL>] e = SelectExpression()  < RPAREN >
+      | < STDDEV_SAMP > <LPAREN>  [< ALL>] e = SelectExpression()  < RPAREN >
+      | < VAR_SAMP > <LPAREN>  [< ALL>] e = SelectExpression()  < RPAREN >
+    )
+      {
+        return  e ;
+      }
+}
+
+Expression Args():
+{
+ExpressionList args = new ExpressionList();
+Expression tmp ;
+}
+{
+ 	(
+	 	  tmp=Arg( ) {args.addExpression(tmp); }
+	    (
+	        <COMMA>  
+	        tmp= Arg(){args.addExpression(tmp); }
+	    )*
+    )
+    {
+ 	 return args;
+	}
+  |
+  { return null; }
+
+
+}
+
+Expression Arg() :
+{
+    Expression e = null;
+}
+{
+    
+    (
+        e = SelectExpression()
+    )
+    {
+         return e;
+    }
+}
+Expression DataType(): {Expression typeName; }
+{
+	typeName = TypeName() {
+		return typeName;
+    }
+    
+}  
+Expression TypeName() :
+{
+   Expression typeNameSpec;
+}
+{
+    (
+        LOOKAHEAD(2)
+        typeNameSpec = SqlTypeName()
+    |
+        typeNameSpec = CompoundIdentifier() 
+    )
+    {
+        return typeNameSpec;
+    }
+}
+
+Expression SqlTypeName() :
+{
+    final String sqlTypeNameSpec;
+}
+{
+    (
+        sqlTypeNameSpec = SqlTypeName1()
+//    |
+//        sqlTypeNameSpec = SqlTypeName2(s)
+//    |
+//        sqlTypeNameSpec = SqlTypeName3(s)
+//    |
+//        sqlTypeNameSpec = CharacterTypeName(s)
+//    |
+//        sqlTypeNameSpec = DateTimeTypeName()
+    )
+    {
+        return new StringValue(sqlTypeNameSpec);
+    }
+}
+
+String SqlTypeName1() :
+{
+    final String sqlTypeName;
+}
+{
+    (
+        <GEOMETRY> {
+            sqlTypeName = "GEOMETRY";
+        }
+    |
+        <BOOLEAN> { sqlTypeName = "BOOLEAN"; }
+    |
+        ( <INTEGER> | <INT> ) { sqlTypeName = "INTEGER"; }
+    |
+        <TINYINT> { sqlTypeName = "TINYINT"; }
+    |
+        <SMALLINT> { sqlTypeName = "SMALLINT"; }
+    |
+        <BIGINT> { sqlTypeName = "BIGINT"; }
+     
+    |
+        <DOUBLE> { sqlTypeName = "DOUBLE"; }
+        
+    |
+        <FLOAT> { sqlTypeName = "FLOAT"; }
+    )
+    {
+        return sqlTypeName;
+    }
+}
+String PrefixRowOperator() :
+{}
+{
+    <PLUS> { return "+"; }
+|   <MINUS> { return "-"; }
+|   <NOT> { return "NOT"; }
+|   <EXISTS> { return "EXISTS"; }
+}
+/**
+ * Parses a compound identifier.
+ */
+Expression CompoundIdentifier() :
+{
+    boolean star = false;
+    Table table;
+    Expression item;
+}
+{
+   item = IdentifierSegment() {
+		table = new Table();
+		table.addPartItem(item);
+   }
+    (
+        LOOKAHEAD(2)
+        <DOT>
+    	item =  IdentifierSegment() {
+			table.addPartItem(item);
+        }
+    )*
+    (
+        LOOKAHEAD(2)
+        <DOT>
+        <STAR> {
+             star = true;
+        }
+    )?
+    {
+      if(star) {
+ 		 return new AllTableColumns(table);
+      } else {
+		 return table;
+      }
+      
+    }
+}
+Expression FunctionName() :
+{
+  ExpressionList items = new ExpressionList();
+  Expression item;
+}
+{
+   item = IdentifierSegment() {
+	items.addExpression(item);
+   }
+    (
+        LOOKAHEAD(2)
+        <DOT>
+    	item =  IdentifierSegment() {
+			 items.addExpression(item);
+        }
+    )*
+     
+    {
+      return items;
+      
+    }
+}  
+void SqlAlterStmt():
+{
+
+}
+{
+   <ALTER> 
+ (
+  LOOKAHEAD(1)
+  	 SqlAlterInstance()
+       |
+	 SqlAlterResourceGroup()
+	   |
+	 SqlAlterTable()
+	   |
+	 SqlAlterDatabase() 
+ )
+}
+void SqlAlterDatabase():
+{
+  Expression database;
+}
+{
+  < DATABASE >  database=Identifier()
+	 createDatabaseOptions()
+}
+
+void createDatabaseOptions(): {}
+{
+  (
+    createDatabaseOption()
+  )+
+}
+void createDatabaseOption(): { }
+{
+	[< DEFAULT_ >]
+    (
+        < CHARACTER >  <SET > [<EQ >]  IdentifierSegment( )
+	  | < COLLATE >   [<EQ >]     IdentifierSegment( )
+	  | < ENCRYPTION > [<EQ >]    IdentifierSegment( )
+	)
+
+    | < READ > < ONLY > [<EQ >]    IdentifierSegment( )
+}
+
+
+void SqlAlterTable():
+{
+	Expression tableName;
+	Expression algorithm;
+}
+{
+  <TABLE > tableName=Identifier() {tableName=new StringValue(getToken(0).image); }
+
+	[
+		< ALGORITHM > <EQ > <IDENTIFIER >{ algorithm=new StringValue(getToken(0).image); }
+	]
+}
+
+void SqlAlterResourceGroup() :
+{
+  String groupName ="";
+}
+{
+ <RESOURCE > <GROUP > <IDENTIFIER > {groupName=getToken(0).image; }
+
+   (
+    
+	  (
+	    < VCPU >< EQ >
+	    (
+	      LOOKAHEAD(<UNSIGNED_INTEGER_LITERAL > <MINUS >)
+	       <UNSIGNED_INTEGER_LITERAL > <MINUS > <UNSIGNED_INTEGER_LITERAL >  
+	      |
+			<UNSIGNED_INTEGER_LITERAL >
+	  	)
+	   )
+	   |
+	   < THREAD_PRIORITY > < EQ > <UNSIGNED_INTEGER_LITERAL >
+	   |
+	   < DISABLE ><FORCE >
+   )
+}
+/**
+ * Parses an expression for setting or resetting an option in SQL, such as QUOTED_IDENTIFIERS,
+ * or explain plan level (physical/logical).
+ */
+void SqlAlterInstance() :
+{
+    final String scope;
+}
+{
+    
+      <INSTANCE >
+    
+	(
+	  < ROTATE >
+		(
+		  < INNODB > {
+
+		  }
+		|
+		  < BINLOG >{
+
+		  }
+		)
+		  < MASTER > < KEY >
+	| 
+      < RELOAD > <TLS >
+      [
+		< NO ><ROLLBACK ><ON ><ERROR >	
+      ]
+    )
+
+}
+
+String JoinType() :
+{
+    String joinType="";
+}
+{
+    (
+        <JOIN> { joinType = "INNER"; }
+    |
+        <INNER> <JOIN> { joinType = "INNER"; }
+    |
+        <LEFT> [ <OUTER> ] <JOIN> { joinType = "LEFT"; }
+    |
+        <RIGHT> [ <OUTER> ] <JOIN> { joinType = "RIGHT"; }
+    |
+        <FULL> [ <OUTER> ] <JOIN> { joinType = "FULL"; }
+    |
+        <CROSS> <JOIN> { joinType = "CROSS"; }
+    )
+    
+    {
+        return joinType;
+    }
+}
+/**
+ * Parses "SET &lt;NAME&gt; = VALUE" or "RESET &lt;NAME&gt;", without a leading
+ * "ALTER &lt;SCOPE&gt;".
+ */
+void SqlSetOption(String scope) :
+{
+    Expression name;
+    Expression val;
+    List s = new ArrayList();
+}
+{
+    (
+        <SET> {
+            s.add(this);
+        }
+        name = CompoundIdentifier()
+        <EQ>
+        (
+            val = Literal()
+
+        |
+            <ON> {
+                // OFF is handled by SimpleIdentifier, ON handled here.
+                val = new StringValue(token.image);
+            }
+        )
+        {
+            return ;
+        }
+    |
+        <RESET> {
+            s.add(this);
+        }
+        (
+            name = CompoundIdentifier()
+        |
+            <ALL> {
+                name =new StringValue(token.image.toUpperCase());
+            }
+        )
+        {
+            return ;
+        }
+    )
+}
+
+
+
+Expression Literal() :
+{
+    Expression e;
+}
+{
+    (
+        e = NumericLiteral()
+    |
+        e = IdentifierSegment()
+    |
+        e = NullLiteral()
+//    |
+//        e = DateTimeLiteral()
+//    |
+//        e = IntervalLiteral()
+    )
+    {
+        return e;
+    }
+	
+
+}
+ Expression NullLiteral(): { }
+{
+    <NULL> { return new NullValue(); }
+}
+/** Parses a numeric literal (can be signed) */
+Expression NumericLiteral() :
+{
+    final Expression num;
+}
+{
+    <PLUS> num = UnsignedNumericLiteral() {
+        return num;
+    }
+|
+    <MINUS>  num = UnsignedNumericLiteral() {
+        return num;
+    }
+|
+    num = UnsignedNumericLiteral() {
+        return num;
+    }
+}
+/** Parses a unsigned numeric literal */
+LongValue UnsignedNumericLiteral() :
+{
+}
+{
+  (
+      <UNSIGNED_INTEGER_LITERAL> 
+|
+    <DECIMAL_NUMERIC_LITERAL>
+|
+    <APPROX_NUMERIC_LITERAL> ) {
+        return new LongValue(token.image);
+    }
+}
+String Scope() :
+{
+    final String num;
+}
+{
+     <SYSTEM >  { return token.image.toUpperCase(); }
+     |
+     <SESSION >  { return token.image.toUpperCase(); }
+}
+Expression Identifier() :
+{
+    final List<String> names = new ArrayList<String>();
+    Expression iden;
+}
+{
+   iden= IdentifierSegment()
+   {
+     return iden;
+   }
+}
+Expression IdentifierSegment( ) :
+{
+    final String id;
+    char unicodeEscapeChar = BACKSLASH;
+}
+{
+    ( 
+        <IDENTIFIER>  
+    |
+        <QUOTED_IDENTIFIER>  
+     |
+        <QUOTED_STRING>  
+    |
+        <BRACKET_QUOTED_IDENTIFIER>  
+    | 
+        < BACK_QUOTED_IDENTIFIER > 
+    |   < QUOTED_STRING_LITERAL >[LOOKAHEAD(1) <COLLATE > <IDENTIFIER>]      
+    |   < QUOTED_STRING_LITERAL2 > 
+	|   < BINARY_STRING_LITERAL >  
+    )
+    {
+				return new StringValue(getToken(0).image);
+        }
+    
+}
+JAVACODE String unquotedIdentifier() {
+    return "unquotedIdentifier";
+}
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+< AND:"AND" >
+|   < ANY:"ANY" >
+|   < AS:"AS" >
+|   < ASC:"ASC" >    
+|   < ALGORITHM:"ALGORITHM" >    
+| 	< ALTER:"ALTER" >
+| 	< ALL:"ALL" >
+|   < AVG:"AVG" >
+|   < BETWEEN:"BETWEEN" >
+|   < BIGINT:"BIGINT" >
+|   < BINLOG:"BINLOG" >
+|   < BIT_AND:"BIT_AND" >
+|   < BIT_OR:"BIT_OR" >
+|   < BIT_XOR:"BIT_XOR" >
+|   < BOOLEAN:"BOOLEAN" >
+|   < BY:"BY" >
+|   < CASE:"CASE" >
+|   < CAST:"CAST" >
+|   < CHARACTER:"CHARACTER" >
+|   < COLLATE:"COLLATE" >
+|   < CONVERT:"CONVERT" >
+|   < COUNT:"COUNT" >
+|   < CROSS: "CROSS" >
+|   < DATABASE:"DATABASE" >
+|   < DEFAULT_:"DEFAULT" >
+|   < DESC:"DESC" >
+|   < DISABLE:"DISABLE" >
+|   < DISTINCT:"DISTINCT">
+|   < DOUBLE:"DOUBLE" >
+|   < ELSE:"ELSE" >
+|   < ENCRYPTION:"ENCRYPTION" >
+|   < END:"END" >
+|   < EXISTS:"EXISTS" >
+| 	< FLOAT:"FLOAT" >
+|   < FORCE:"FORCE" >
+|   < FROM:"FROM" >
+|   < FULL: "FULL" >
+|   < GEOMETRY:"GEOMETRY" >
+| 	< GROUP:"GROUP" >
+|   < HAVING:"HAVING" >
+|   < HIGH_PRIORITY:"HIGH_PRIORITY" >
+|   < IN:"IN" >
+|   < INNER: "INNER" >
+|   < INNODB :"INNODB" >
+|   < INSTANCE:"INSTANCE" >
+|   < INT:"INT" >
+|   < INTEGER:"INTEGER" >
+|   < IS:"IS" >
+|   < JOIN: "JOIN" >
+|   < KEY:"KEY" >
+|   < LEFT:"LEFT" >
+|   < LIMIT:"LIMIT" >
+|   < ERROR:"ERROR" >
+|   < MASTER:"MASTER" >
+|   < READ:"READ" >
+| 	< RELOAD :"RELOAD" >
+| 	< RESET:"RESET" >
+|   < RESOURCE:"RESOURCE" >
+|   < RIGHT: "RIGHT" >
+|   < MAX:"MAX" >
+|   < MIN:"MIN" >
+|   < NATURAL:"NATURAL" >
+| 	< NO:"NO" >
+|   < NOT:"NOT" >
+|   < NULL: "NULL" >
+|   < OFFSET:"OFFSET" >
+| 	< ON:"ON" >
+|   < ONLY:"ONLY" >
+| 	< OR:"OR" >
+| 	< ORDER:"ORDER" >
+|   < OUTER: "OUTER" >
+|   < ROLLBACK :"ROLLBACK" >
+|   < ROTATE:"ROTATE" >
+|   < SELECT:"SELECT" >
+| 	< SESSION:"SESSION" >
+| 	< SET:"SET" >
+|   < SMALLINT:"SMALLINT" >
+|   < STD:"STD" >
+|   < STDDEV_SAMP:"STDDEV_SAMP" >
+|   < STRAIGHT_JOIN:"STRAIGHT_JOIN" >
+|   < SQL_BIG_RESULT:"SQL_BIG_RESULT" >
+|   < SQL_BUFFER_RESULT:"SQL_BUFFER_RESULT" >
+|   < SQL_CALC_FOUND_ROWS:"SQL_CALC_FOUND_ROWS" >
+|   < SQL_NO_CACHE:"SQL_NO_CACHE" >
+|   < SQL_SMALL_RESULT:"SQL_SMALL_RESULT" >
+|   < SUM:"SUM" >
+| 	< SYSTEM:"SYSTEM" >
+|   < TABLE:"TABLE" >
+|   < THEN:"THEN" >
+|   < TINYINT:"TINYINT" >
+|   < TLS:"TLS" >
+|   < THREAD_PRIORITY:"THREAD_PRIORITY" >
+|   < UNION:"UNION" >
+|   < USING:"USING" >
+|   < VAR_SAMP:"VAR_SAMP" >
+|   < VARIANCE:"VARIANCE" >
+|   < VCPU:"VCPU" >
+|   < WHEN:"WHEN" >
+|   < WHERE:"WHERE" >
+|   < ZONE:"ZONE" >
+}
+
+
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < UNSIGNED_INTEGER_LITERAL: (["0"-"9"])+ >
+|
+    < APPROX_NUMERIC_LITERAL:
+    ((<UNSIGNED_INTEGER_LITERAL> | <DECIMAL_NUMERIC_LITERAL>) <EXPONENT>)|< HEX_LITERAL >  >
+|
+    < DECIMAL_NUMERIC_LITERAL:
+    (["0"-"9"])+(".")?(["0"-"9"])*
+    | "."(["0"-"9"])+
+    >
+|
+    < #EXPONENT: ["e","E"] (["+","-"])? (["0"-"9"])+ >
+|
+    < #HEXDIGIT: ["0"-"9","a"-"f","A"-"F"] >
+|
+    < #WHITESPACE:
+    [ " ","\t","\n","\r","\f" ]
+    >
+|
+    /* To improve error reporting, we allow all kinds of characters,
+     * not just hexits, in a binary string literal. */
+    < BINARY_STRING_LITERAL: ["x","X"] <QUOTE> ( (~["'"]) | ("''"))* <QUOTE> >
+|
+    < QUOTED_STRING: <QUOTE> ( (~["'"]) | ("''"))* <QUOTE> >
+//|
+//    < PREFIXED_STRING_LITERAL: ("_" <CHARSETNAME> | "N") <QUOTED_STRING> >
+|
+    < QUOTED_STRING_LITERAL: ("_" <CHARSETNAME> ) <QUOTE> ( (~["'"]) | ("''"))* <QUOTE> >
+|
+	< QUOTED_STRING_LITERAL2: ["n","N"] <QUOTE> ( (~["'"]) | ("''"))* <QUOTE> >  
+| 
+    < UNICODE_STRING_LITERAL: "U" "&" <QUOTED_STRING> >
+
+|  
+    < #CHARSETNAME: (["a"-"z","A"-"Z","0"-"9"])
+    (["a"-"z","A"-"Z","0"-"9",":",".","-","_"])*
+    >
+|   < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+ >    
+}
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < UNICODE_QUOTED_ESCAPE_CHAR:
+    <QUOTE>
+    (~["0"-"9","a"-"f","A"-"F","+","\""," ","\t","\n","\r","\f"])
+    <QUOTE>
+    >
+}
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < LPAREN: "(">
+|   < RPAREN: ")">
+|   < LBRACE_D: "{" (" ")* ["d","D"] >
+|   < LBRACE_T: "{" (" ")* ["t","T"] >
+|   < LBRACE_TS: "{" (" ")* ["t","T"] ["s","S"] >
+|   < LBRACE_FN: "{" (" ")* ["f","F"] ["n","N"] >
+|   < LBRACE: "{" >
+|   < RBRACE: "}" >
+|   < LBRACKET: "[" >
+|   < RBRACKET: "]" >
+|   < SEMICOLON: ";" >
+|   < DOT: "." >
+|   < COMMA: "," >
+}
+
+
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < EQ: "=" >
+|   < GT: ">" >
+|   < LT: "<" >
+|   < HOOK: "?" >
+|   < COLON: ":" >
+|   < LE: "<=" >
+|   < GE: ">=" >
+|   < NE: "<>" >
+|   < NE2: "!=" >
+|   < LIKE: "LIKE" >
+|   < PLUS: "+" >
+|   < EQ2: "<=>" >
+|   < MINUS: "-" >
+|   < STAR: "*" >
+|   < SLASH: "/" >
+|   < PERCENT_REMAINDER: "%" >
+|   < CONCAT: "||" >
+|   < NAMED_ARGUMENT_ASSIGNMENT: "=>" >
+|   < DOUBLE_PERIOD: ".." >
+|   < QUOTE: "'" >
+|   < DOUBLE_QUOTE: "\"" >
+|   < BACK_QUOTE: "`" >
+|   < VERTICAL_BAR: "|" >
+|   < CARET: "^" >
+|   < DOLLAR: "$" >
+|   < REGEXP:"REGEXP" >
+|   < LN:"\\G" >
+}
+
+/*****************************************
+ * Lexical Descriptions                  *
+ *****************************************/
+
+TOKEN_MGR_DECLS : {
+    List<Integer> lexicalStateStack = new ArrayList<Integer>();
+
+    void pushState() {
+      lexicalStateStack.add(curLexState);
+    }
+
+    void popState() {
+      SwitchTo(lexicalStateStack.remove(lexicalStateStack.size() - 1));
+    }
+
+}
+
+/* WHITE SPACE */
+<DEFAULT, DQID, BTID> SKIP :
+{
+    " "
+|   "\t"
+|   "\n"
+|   "\r"
+|   "\f"
+}
+
+/* COMMENTS */
+
+<DEFAULT, DQID, BTID> MORE :
+{
+    <"/**" ~["/"]> { pushState(); } : IN_FORMAL_COMMENT
+}
+
+<DEFAULT, DQID, BTID> MORE :
+{
+    "/*" { pushState(); } : IN_MULTI_LINE_COMMENT
+}
+
+<DEFAULT, DQID, BTID> SKIP :
+{
+    <SINGLE_LINE_COMMENT: ("#"|"//"|"-- ")(~["\n","\r"])* ("\n"|"\r"|"\r\n")? >
+}
+
+<IN_FORMAL_COMMENT>
+SPECIAL_TOKEN :
+{
+    <FORMAL_COMMENT: "*/" > { popState(); }
+}
+
+<IN_MULTI_LINE_COMMENT>
+SPECIAL_TOKEN :
+{
+    <MULTI_LINE_COMMENT: "*/" > { popState(); }
+}
+
+<IN_FORMAL_COMMENT,IN_MULTI_LINE_COMMENT>
+MORE :
+{
+    < ~[] >
+}
+
+
+/* IDENTIFIERS */
+
+<DEFAULT> TOKEN :
+{
+    < BACK_QUOTED_IDENTIFIER:
+    "`"
+    (
+        (~["`","\n","\r"])
+    |
+        ("``")
+    )+
+    "`"
+    >
+}
+
+<DEFAULT> TOKEN :
+{
+    < QUOTED_IDENTIFIER:
+    "\""
+    (
+        (~["\"","\n","\r"])
+    |
+        ("\"\"")
+    )+
+    "\""
+    >
+}
+<BTID>  TOKEN :
+{
+    
+    < BRACKET_QUOTED_IDENTIFIER:
+    "["
+    (
+        (~["]","\n","\r"])
+    |
+        ("]]")
+    )+
+    "]"
+    >
+}
+
+
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < COLLATION_ID:
+    (<LETTER>|<DIGIT>)+ (<LETTER>|<DIGIT>|":"|"."|"-"|"_")*
+    "$"
+    (<LETTER>|"_")+
+    ("$" (<LETTER>|<DIGIT>|"_")+)?
+    >
+|
+    < IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>)* >
+|
+    < UNICODE_QUOTED_IDENTIFIER: "U" "&" <QUOTED_IDENTIFIER> >
+|
+    < #LETTER:
+    [
+        "\u0024",
+        "\u0041"-"\u005a",
+        "\u005f",
+        "\u0061"-"\u007a",
+        "\u00c0"-"\u00d6",
+        "\u00d8"-"\u00f6",
+        "\u00f8"-"\u00ff",
+        "\u0100"-"\u1fff",
+        "\u3040"-"\u318f",
+        "\u3300"-"\u337f",
+        "\u3400"-"\u3d2d",
+        "\u4e00"-"\u9fff",
+        "\uf900"-"\ufaff"
+    ]
+    >
+|
+    < #DIGIT:
+    [
+        "\u0030"-"\u0039",
+        "\u0660"-"\u0669",
+        "\u06f0"-"\u06f9",
+        "\u0966"-"\u096f",
+        "\u09e6"-"\u09ef",
+        "\u0a66"-"\u0a6f",
+        "\u0ae6"-"\u0aef",
+        "\u0b66"-"\u0b6f",
+        "\u0be7"-"\u0bef",
+        "\u0c66"-"\u0c6f",
+        "\u0ce6"-"\u0cef",
+        "\u0d66"-"\u0d6f",
+        "\u0e50"-"\u0e59",
+        "\u0ed0"-"\u0ed9",
+        "\u1040"-"\u1049"
+    ]
+    >
+}
+/* Special token to throw a wrench in the works. It is never valid in SQL,
+   and so when it occurs, it causes the parser to print which tokens would
+   have been valid at that point. Used by SqlAdvisor. */
+<DEFAULT, DQID, BTID> TOKEN :
+{
+    < BEL:
+    [
+        "\u0007"
+    ]
+    >
+}
+
+void UnusedExtension() :
+{
+}
+{
+    (
+        LOOKAHEAD({false}) <ZONE>
+    )
+}
+// End Parser.jj

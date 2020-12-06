@@ -1,0 +1,149 @@
+ALTER TABLE `abcdefg` ALGORITHM=abcdefg
+
+ALTER INSTANCE RELOAD TLS NO ROLLBACK ON ERROR
+ALTER INSTANCE ROTATE INNODB MASTER KEY
+ALTER INSTANCE ROTATE BINLOG MASTER KEY
+ALTER INSTANCE RELOAD TLS 
+
+ALTER RESOURCE GROUP rg1 VCPU = 0-63 
+ALTER RESOURCE GROUP rg1 VCPU = 63
+ALTER RESOURCE GROUP rg2 THREAD_PRIORITY = 5 
+ALTER RESOURCE GROUP rg3 DISABLE FORCE
+
+
+alter database test default CHARACTER set utf8
+alter database test default CHARACTER set utf8 default COLLATE=sadfasdf
+alter DATABASE test READ ONLY =`0`
+ALTER DATABASE test default ENCRYPTION ='Y'
+ALTER DATABASE test ENCRYPTION ='Y'
+
+select aaaaa -- asdf
+select bbbbb
+select aaaa.bbbbb
+select aaaa.bbbbb.*
+select aaaaa.*
+select *
+
+select aaaaa.bbbbb.ccccc.*
+SELECT N'some text'
+SELECT n'some text'
+SELECT _utf8'some text'
+SELECT _utf8'string' COLLATE utf8_danish_ci
+SELECT 'hello', '"hello"', '""hello""', 'hel''lo', 'hello'
+SELECT 'This\nIs\nFour\nLines'
+SELECT 'disappearing\ backslash'
+SELECT X'4D7953514C', CHARSET(X'4D7953514C')
+SELECT 0x5461626c65, CHARSET(0x5461626c65)
+SELECT _latin1 X'4D7953514C'
+SELECT TRUE, true, FALSE, false
+SELECT CHARSET(X''), LENGTH(X'')
+SELECT HEX('cat')
+SELECT X'636174'
+SELECT NULL, 1+NULL, CONCAT('Invisible',NULL)
+SELECT * FROM my_table WHERE phone = NULL
+SELECT COUNT(*), COUNT(age) FROM person
+SELECT SQRT(a*b) AS root FROM tbl_name GROUP BY root HAVING root > 0
+SELECT id, COUNT(*) AS cnt FROM tbl_name GROUP BY id HAVING cnt > 0
+SELECT id AS 'Customer identity' FROM tbl_name
+SELECT id AS 'a', COUNT(*) AS cnt FROM tbl_name GROUP BY `a`
+SELECT t1.name, t2.salary FROM employee AS t1 INNER JOIN info AS t2 ON t1.name = t2.name
+SELECT t1.name, t2.salary FROM employee t1 INNER JOIN info t2 ON t1.name = t2.name
+SELECT left_tbl.* FROM left_tbl LEFT JOIN right_tbl ON left_tbl.id = right_tbl.id WHERE right_tbl.id IS NULL
+SELECT * FROM t1 NATURAL LEFT JOIN t2
+SELECT * FROM t1 LEFT JOIN t2 ON (t1.a = t2.a)
+SELECT * FROM t1 RIGHT JOIN t2 ON (t1.a = t2.a)
+SELECT * FROM t1 JOIN t2 ON (i1 = i3) JOIN t3
+SELECT * FROM t1 JOIN t2 JOIN t3 ON (i1 = i3)
+SELECT * FROM t1, t2 JOIN t3 ON (t1.i1 = t3.i3)
+SELECT * FROM t1 JOIN t2 JOIN t3 ON (t1.i1 = t3.i3)
+SELECT c1, c2, t1.c FROM t1 INNER JOIN t2 WHERE t2.c > 100
+SELECT c1, c2, db1.t.c FROM db1.t INNER JOIN db2.t WHERE db2.t.c > 100
+SELECT c1, c2, t1.c FROM db1.t AS t1 INNER JOIN db2.t AS t2 WHERE t2.c > 100
+SELECT * FROM my_table WHERE MY_TABLE.col=1
+SELECT col_name FROM tbl_name AS a        WHERE a.col_name = 1 OR A.col_name = 2
+SELECT '6/4', 6/4
+select +bbbbb,ccc,ddd,*,`sddd` as  ddd,`sddd`  ddd1
+
+select aaaaa.bbbbb+ccc-111*222/333
+select ---(--1+---1+1)
+select 1---1
+SELECT -+1
+SELECT --1
+SELECT -1
+select 1 <=> 0, 1 <=> null, 1 = null
+select CASE when 1>1  then 3 end 
+select cast(a as bigint),convert(b,int)
+select convert("aaaa" using "utf8")
+select * from company where 1=1 and case when 1=1 then 1=1 else 1=1 end
+select sum(a) from company where 1=1 and (case when (1=1) then 1=1 else 1=1 end)
+select sum(all a) from company where 1=1 and (case when (1=1) then 1=1 else 1=1 end)
+select sum(distinct a) from company where 1=1 and (case when (1=1) then 1=1 else 1=1 end)
+select sum(distinct all a) from company where 1=1 and (case when (1=1) then 1=1 else 1=1 end)
+select *  from sys_dict where id in (2,(select min(id) from tb_user),(select 3),(select 4))
+select *  from sys_dict where id in (1,2,3,4,5,4)
+select *  from sys_dict where id in ('asdf','df')
+select *  from sys_dict where id in (select  ddd from bbb where aaa='bbb')
+select company_id, company_name, alias, business_license_registr_no, customer_address_detail, business_license_registr_type, customer_address_province, case when estiblishtime is not null and estiblishtime !='' then from_unixtime(cast(estiblishtime/1000 as bigint),'yyyyMMdd') else estiblishtime end as estiblishtime, case when fromtime is not null and fromtime !='' then from_unixtime(cast(fromtime/1000 as bigint),'yyyyMMdd') else fromtime end as fromtime, industry, regcapital, actualcapital, case  when staffnumrange is not null and staffnumrange !='' and staffnumrange !='null' then   case   when staffnumrange regexp ('.*人.*') then    case     when staffnumrange ='50人以下' then 'staffnumrange_01'    when staffnumrange ='50-99人' then 'staffnumrange_02'    when staffnumrange ='100-499人' then 'staffnumrange_03'    when staffnumrange ='500-999人' then 'staffnumrange_04'    when staffnumrange ='1000-4999人' then 'staffnumrange_05'    when staffnumrange ='5000-9999人' then 'staffnumrange_05'    when staffnumrange ='10000人以上' then 'staffnumrange_05'    end  else    case     when cast(staffnumrange as int) < 50 then 'staffnumrange_01'    when cast(staffnumrange as int) >=50 and cast(staffnumrange as int) <= 99 then 'staffnumrange_02'    when cast(staffnumrange as int) >=100 and cast(staffnumrange as int) <= 499 then 'staffnumrange_03'    when cast(staffnumrange as int) >=500 and cast(staffnumrange as int) <= 999 then 'staffnumrange_04'    when cast(staffnumrange as int) >= 1000  then 'staffnumrange_05'    end   end else staffnumrange end as staffnumrange, websitelist, road_license, contact_person_masking, reserved_phone_number, reserved_phone_number_masking, phonenumber, phonenumber_masking, company_owner, company_owner_masking, company_legal_phone, company_legal_phone_masking from bigdata_warehouse.d_company
+select company_id, company_name, alias, business_license_registr_no, customer_address_detail, business_license_registr_type, customer_address_province, case when estiblishtime is not null and estiblishtime !='' then from_unixtime(cast(estiblishtime/1000 as bigint),'yyyyMMdd') else estiblishtime end as estiblishtime, case when fromtime is not null and fromtime !='' then from_unixtime(cast(fromtime/1000 as bigint),'yyyyMMdd') else fromtime end as fromtime, industry, regcapital, actualcapital, case  when staffnumrange is not null and staffnumrange !='' and staffnumrange !='null' then   case   when staffnumrange regexp('.*人.*') then    case     when staffnumrange ='50人以下' then 'staffnumrange_01'    when staffnumrange ='50-99人' then 'staffnumrange_02'    when staffnumrange ='100-499人' then 'staffnumrange_03'    when staffnumrange ='500-999人' then 'staffnumrange_04'    when staffnumrange ='1000-4999人' then 'staffnumrange_05'    when staffnumrange ='5000-9999人' then 'staffnumrange_05'    when staffnumrange ='10000人以上' then 'staffnumrange_05'    end  else    case     when cast(staffnumrange as int) < 50 then 'staffnumrange_01'    when cast(staffnumrange as int) >=50 and cast(staffnumrange as int) <= 99 then 'staffnumrange_02'    when cast(staffnumrange as int) >=100 and cast(staffnumrange as int) <= 499 then 'staffnumrange_03'    when cast(staffnumrange as int) >=500 and cast(staffnumrange as int) <= 999 then 'staffnumrange_04'    when cast(staffnumrange as int) >= 1000  then 'staffnumrange_05'    end   end else staffnumrange end as staffnumrange, websitelist, road_license, contact_person_masking, reserved_phone_number, reserved_phone_number_masking, phonenumber, phonenumber_masking, company_owner, company_owner_masking, company_legal_phone, company_legal_phone_masking from bigdata_warehouse.d_company
+select *  from sys_dict where id like 'dfd%' and aa not like 'dd%'
+(select  1 from tb_azkaban_schedule  where 1<>1 and EXISTS (select 1 from tb_ding_approval))
+SELECT dept_name,sum(cpu)/1000/3600,sum(mem)/1024/1024/1024,sum(ioin),sum(ioout) FROM `user_res` left outer join user_dept on user_res.`user`=user_dept.user_code where `year`=202007 group by dept_name
+select api_org.api_org, tm.orgname,ifnull(m5.num,0),ifnull(m6.num,0),ifnull(m7.num,0),ifnull(m8.num,0) from (select distinct orgname as orgname from api_cnt) as tm left outer join api_org on (tm.orgname=api_org.api_plat) left outer join api_cnt as m5 on tm.orgname=m5.orgname and m5.yearmonth=5 left outer join api_cnt as m6 on tm.orgname=m6.orgname and m6.yearmonth=6 left outer join api_cnt as m7 on tm.orgname=m7.orgname and m7.yearmonth=7 left outer join api_cnt as m8 on tm.orgname=m8.orgname and m8.yearmonth=8 order by api_org.api_org
+(((((select 1 from tb_ding_approval)))))
+SELECT nickname FROM users WHERE id=?
+SELECT * FROM items WHERE items.seller=? AND items.end_date>=NOW()
+SELECT item_id FROM bids, old_items WHERE 	bids.user_id=?	AND bids.item_id=old_items.id	AND TO_DAYS(NOW()) - TO_DAYS(old_items.end_date) < 30 GROUP BY item_id
+SELECT item_id, bids.max_bid FROM bids, items WHERE bids.user_id=? AND bids.item_id=items.id AND items.end_date>=NOW() GROUP BY item_id
+SELECT items.id FROM items,users WHERE items.category=4 AND items.seller=users.id AND users.region=1 AND end_date>=NOW() ORDER BY items.end_date ASC LIMIT 0,25
+SELECT id FROM users WHERE EXISTS (SELECT * FROM tab2)
+SELECT id FROM users LEFT JOIN (SELECT user_id FROM bids) as t2 on 1=1
+SELECT id FROM users LEFT JOIN (SELECT user_id FROM bids) as t2 on (1=1)
+SELECT MAX(creation_date) FROM regions,(SELECT id FROM users WHERE id>10) as t1
+SELECT      'w h i t e		s p a c e'
+SELECT  1 + 2 AS result,    idx,    id,    test.`users`.username AS `name` FROM    `test`.users, posts     WHERE     id > 0 ORDER BY    username DESC,    id LIMIT 3 OFFSET 2
+SELECT MAX(cs.site_code), MAX(cs.site_name), MAX(cr.user_id), cr.card_number, CASE MAX(cr.card_type) WHEN 0 THEN '单卡' WHEN 1 THEN '主卡' WHEN 2 THEN '副卡' ELSE MAX(cr.card_type) END, MAX(ac.company_name), COUNT(cr.id), round(SUM(cr.litter),2), round(SUM(cr.amount),2) FROM ads_lmk.ads_consumption_redundancy cr, ods_lmk.ods_card_site cs, ods_lmk.ods_card_apply_company ac WHERE cast(cr.card_site_id as string) = cast(cs.id as string) AND cr.user_id = ac.user_id AND cr.issue_provcode = '11' AND cr.user_type = 2 AND cr.consumer_provcode = '11' AND cr.consumer_type = 1 AND substring(cr.opetime,1,10) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-1) AND substring(cr.opetime,1,10) < date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1) GROUP BY cr.card_site_id, cr.card_number limit 0,3
+SELECT MAX(cs.site_code), MAX(cs.site_name), MAX(cr.user_id), cr.card_number, CASE MAX(cr.card_type) WHEN 0 THEN '单卡' WHEN 1 THEN '主卡' WHEN 2 THEN '副卡' ELSE MAX(cr.card_type) END, MAX(ac.company_name), COUNT(cr.id), round(SUM(cr.litter),2), round(SUM(cr.amount),2) FROM ads_lmk.ads_consumption_redundancy cr, ods_lmk.ods_card_site cs, ods_lmk.ods_card_apply_company ac WHERE cast(cr.card_site_id as string) = cast(cs.id as string) AND cr.user_id = ac.user_id AND cr.issue_provcode = '11' AND cr.user_type = 2 AND cr.consumer_provcode = '11' AND cr.consumer_type = 1 AND substring(cr.opetime,1,10) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-1) AND substring(cr.opetime,1,10) < date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1) GROUP BY cr.card_site_id, cr.card_number limit 0 offset 2
+SELECT b.city_name,        count(DISTINCT CASE WHEN a.fuel_type = '柴油车' THEN b.vid END) AS cheliang_cy,        count(DISTINCT CASE WHEN a.fuel_type = 'LNG车' THEN b.vid END) AS cheliang_lng,        count(CASE WHEN a.province_type = '本省' THEN b.vid END) AS checi_bs,        count(CASE WHEN a.province_type = '外省' THEN b.vid END) AS checi_ws FROM   (SELECT vid,           (CASE WHEN fuel_type = '1' THEN '柴油车' WHEN fuel_type IN ('3',                                                                    '5',                                                                    '6') THEN 'LNG车' ELSE '其他' END) AS fuel_type,           (CASE WHEN province_name = '青海省' THEN '本省' ELSE '外省' END) AS province_type    FROM bigdata_warehouse.d_vehicle    WHERE source_code='1100'      AND enter_network_time IS NOT NULL      AND fuel_type IN ('1',                        '3',                        '5',                        '6')) a JOIN bigdata_warehouse.dws_vehicle_gathermile_county_d b ON a.vid = b.vid WHERE concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-13)   AND concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) < add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-12) and b.province_name = '青海省'  GROUP BY b.city_name
+SELECT MAX(cs.site_code),        MAX(cs.site_name),        MAX(cr.user_id),        cr.card_number,        CASE MAX(cr.card_type)            WHEN 0 THEN '单卡'            WHEN 1 THEN '主卡'            WHEN 2 THEN '副卡'            ELSE MAX(cr.card_type)        END,        MAX(ac.company_name),        COUNT(cr.id),        round(SUM(cr.litter),2),        round(SUM(cr.amount),2) FROM ads_lmk.ads_consumption_redundancy cr,      ods_lmk.ods_card_site cs,      ods_lmk.ods_card_apply_company ac WHERE cr.card_site_id = cs.id   AND cr.user_id = ac.user_id   AND cr.issue_provcode = '11'   AND cr.user_type = 2   AND cr.consumer_provcode = '11'   AND cr.consumer_type = 1   AND substring(cr.opetime,1,10) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-1)   AND substring(cr.opetime,1,10) < date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1) GROUP BY cr.card_site_id,          cr.card_number
+SELECT cr.card_type,        COUNT(DISTINCT cr.user_id),        COUNT(DISTINCT cr.card_number),        round(SUM(cr.amount),2)/10000,        round(SUM(cr.litter),2)/10000,        COUNT(cr.id) FROM ads_lmk.ads_consumption_redundancy cr WHERE cr.issue_provcode = '11'   AND cr.user_type = 1   AND cr.consumer_provcode = '11'   AND cr.consumer_type = 1   AND substring(cr.opetime,1,10) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-1)   AND substring(cr.opetime,1,10) < date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1) GROUP BY cr.card_type
+SELECT b.city_name,        count(DISTINCT CASE WHEN a.fuel_type = '柴油车' THEN b.vid END) AS cheliang_cy,        count(DISTINCT CASE WHEN a.fuel_type = 'LNG车' THEN b.vid END) AS cheliang_lng,        count(CASE WHEN a.province_type = '本省' THEN b.vid END) AS checi_bs,        count(CASE WHEN a.province_type = '外省' THEN b.vid END) AS checi_ws FROM   (SELECT vid,           (CASE WHEN fuel_type = '1' THEN '柴油车' WHEN fuel_type IN ('3',                                                                    '5',                                                                    '6') THEN 'LNG车' ELSE '其他' END) AS fuel_type,           (CASE WHEN province_name = '青海省' THEN '本省' ELSE '外省' END) AS province_type    FROM bigdata_warehouse.d_vehicle    WHERE source_code='1100'      AND enter_network_time IS NOT NULL      AND fuel_type IN ('1',                        '3',                        '5',                        '6')) a JOIN bigdata_warehouse.dws_vehicle_gathermile_county_d b ON a.vid = b.vid WHERE concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-13)   AND concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) < add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-12) and b.province_name = '青海省' GROUP BY b.city_name
+SELECT f.cityname,        e.province_type,        f.route_kind,        f.site_type,        count(f.vid) AS checi FROM   (SELECT vid,           (CASE WHEN province_name = '青海省' THEN '本省' ELSE '外省' END) AS province_type    FROM bigdata_warehouse.d_vehicle    WHERE source_code='1100'      AND enter_network_time IS NOT NULL) e JOIN   (SELECT d.poi_id,           d.vid,           d.cityname,           d.site_type,           (CASE WHEN c.kind = '0' THEN '高速' WHEN c.kind = '1' THEN '高速' WHEN c.kind = '2' THEN '国道' WHEN c.kind = '3' THEN '省道' ELSE '其他' END) AS route_kind    FROM bigdata_warehouse.d_road c    JOIN      (SELECT b.poi_id,              b.vid,              a.cityname,              (CASE WHEN a.kind_3_name = '中国石油' THEN '中国石油' WHEN a.kind_3_name = '中国石化' THEN '中国石化' ELSE '其他' END) AS site_type       FROM bigdata_warehouse.d_oil_station a       JOIN bigdata_warehouse.dwd_vehicle_poi_gas_stop_point b ON a.poi_id = b.poi_id       WHERE a.provname = '青海省'         AND b.duration > 180000         AND b.duration < 7200000         AND b.distance <= 30         AND concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-1)         AND concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) < date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1)) d ON c.id = d.poi_id) f ON e.vid = f.vid GROUP BY f.cityname,          e.province_type,          f.route_kind,          f.site_type
+SELECT a.poi_id,        a.name,        a.kind_3_name,        a.display_x,        a.display_y,        count(b.vid) AS checi_tingkao FROM bigdata_warehouse.d_oil_station a LEFT JOIN bigdata_warehouse.dwd_vehicle_poi_gas_stop_point b ON a.poi_id = b.poi_id WHERE a.provname = '青海省'   AND b.duration > 180000   AND b.duration < 7200000   AND b.distance <= 30   AND concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-1)   AND concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) < date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1) GROUP BY a.poi_id,          a.name,          a.kind_3_name,          a.display_x,          a.display_y
+SELECT a.poi_id,        a.road_name,        a.name,        a.kind_3_name,        a.display_x,        a.display_y,        count(b.vid) AS checi_tingkao FROM ads_lmk.jpf_qinghai_oil_site_poi_result_info a LEFT JOIN bigdata_warehouse.dwd_vehicle_poi_gas_stop_point b ON a.poi_id = b.poi_id WHERE b.duration > 180000   AND b.duration < 7200000   AND b.distance <= 30   AND concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-1)   AND concat(substr(b.date,1,4),'-',substr(b.date,5,2),'-',substr(b.date,7,2)) < date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1) GROUP BY a.poi_id,          a.road_name,          a.name,          a.kind_3_name,          a.display_x,          a.display_y
+SELECT a.road_num,        count(DISTINCT a.vid) AS cheliang FROM   (SELECT DISTINCT admin_region,                    road_num,                    vid    FROM bigdata_warehouse.dws_vehicle_gathermile_line_d    WHERE concat(substr(date,1,4),'-',substr(date,5,2),'-',substr(date,7,2)) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-13)      AND concat(substr(date,1,4),'-',substr(date,5,2),'-',substr(date,7,2)) < add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-12)      AND substring(admin_region,1,2) = '63'      AND road_num IN ('G109',                       'G315',                       'G214')) a GROUP BY a.road_num
+SELECT a.road_num,        count(DISTINCT a.vid) AS cheliang FROM   (SELECT DISTINCT admin_region,                    road_num,                    vid    FROM bigdata_warehouse.dws_vehicle_gathermile_line_d    WHERE concat(substr(date,1,4),'-',substr(date,5,2),'-',substr(date,7,2)) >= add_months(date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1),-1)      AND concat(substr(date,1,4),'-',substr(date,5,2),'-',substr(date,7,2)) < date_sub(CURRENT_DATE,dayofmonth(CURRENT_DATE)-1)      AND substring(admin_region,1,2) = '63'      AND road_num IN ('G109',                       'G315',                       'G214')) a GROUP BY a.road_num
+select  case when issue_province='江西省' then '江西' else  issue_province end, sum(nvl(case when substring(create_time,1,10) = date_add(current_timestamp(),-1) then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) = date_add(current_timestamp(),-1) and apply_type='1' then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) = date_add(current_timestamp(),-1) and (apply_type='3' or apply_type='4') then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) = date_add(current_timestamp(),-1) and apply_type='2' then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) = date_add(current_timestamp(),-1) and (apply_type='5' or apply_type='6') then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,8),'01') and date_add(current_timestamp(),-1) then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,8),'01') and date_add(current_timestamp(),-1) and apply_type='1' then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,8),'01') and date_add(current_timestamp(),-1) and (apply_type='3' or apply_type='4') then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,8),'01') and date_add(current_timestamp(),-1) and apply_type='2' then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,8),'01') and date_add(current_timestamp(),-1) and (apply_type='5' or apply_type='6') then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,4),'-01-01') and date_add(current_timestamp(),-1) then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,4),'-01-01') and date_add(current_timestamp(),-1) and apply_type='1' then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,4),'-01-01') and date_add(current_timestamp(),-1) and (apply_type='3' or apply_type='4') then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,4),'-01-01') and date_add(current_timestamp(),-1) and apply_type='2' then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) between concat(substring(date_add(current_timestamp(),-1),1,4),'-01-01') and date_add(current_timestamp(),-1) and (apply_type='5' or apply_type='6') then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) <= date_add(current_timestamp(),-1) then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) <= date_add(current_timestamp(),-1) and apply_type='1' then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) <= date_add(current_timestamp(),-1) and (apply_type='3' or apply_type='4') then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) <= date_add(current_timestamp(),-1) and apply_type='2' then card_amount else 0 end,0)), sum(nvl(case when substring(create_time,1,10) <= date_add(current_timestamp(),-1) and (apply_type='5' or apply_type='6') then card_amount else 0 end,0)) from  ods_lmk.ods_card_apply where issue_province is not null  group by case when issue_province='江西省' then '江西' else  issue_province end
+
+SELECT * FROM (t1, t2) JOIN t3 ON (t1.i1 = t3.i3)
+SELECT CONCAT(FORMAT(a, 4), b) FROM t1
+
+SELECT REPEAT('a',1) UNION SELECT REPEAT('b',20)
+
+(SELECT a FROM t1 WHERE a=10 AND B=1 ORDER BY a LIMIT 10) UNION (SELECT a FROM t2 WHERE a=11 AND B=2 ORDER BY a LIMIT 10)
+(SELECT a FROM t1 WHERE a=10 AND B=1) UNION (SELECT a FROM t2 WHERE a=11 AND B=2) ORDER BY a LIMIT 10
+SELECT 1 AS foo UNION SELECT 2 ORDER BY MAX(1)
+
+SELECT * FROM (t1, t2) JOIN t3 ON (t1.i1 = t3.i3)
+SELECT DISTINCT store_type FROM stores  WHERE EXISTS (SELECT * FROM cities_stores                WHERE cities_stores.store_type = stores.store_type)
+SELECT DISTINCT store_type FROM stores  WHERE NOT EXISTS (SELECT * FROM cities_stores                    WHERE cities_stores.store_type = stores.store_type)
+SELECT DISTINCT store_type FROM stores s1  WHERE NOT EXISTS (    SELECT * FROM cities WHERE NOT EXISTS (      SELECT * FROM cities_stores       WHERE cities_stores.city = cities.city       AND cities_stores.store_type = stores.store_type))
+SELECT * FROM t1  WHERE column1 = ANY (SELECT column1 FROM t2                       WHERE t2.column2 = t1.column2)
+SELECT sb1,sb2,sb3  FROM (SELECT s1 AS sb1, s2 AS sb2, s3*2 AS sb3 FROM t1) AS sb  WHERE sb1 > 1
+SELECT AVG(sum_column1)  FROM (SELECT SUM(column1) AS sum_column1        FROM t1 GROUP BY column1) AS t1
+#SELECT * FROM (SELECT 1, 2, 3, 4) AS dt (a, b, c, d)
+
+SELECT * FROM t1 WHERE t1.d > (SELECT AVG(dt.a)                FROM (SELECT SUM(t2.a) AS a                      FROM t2                      WHERE t2.b = t1.b GROUP BY t2.c) dt              WHERE dt.a > 10)
+
+SELECT NOW() AS a1, (SELECT f1(5)) AS a2
+SELECT  salesperson.name,  max_sale.amount,  max_sale_customer.customer_name FROM  salesperson,  (SELECT MAX(amount) AS amount    FROM all_sales    WHERE all_sales.salesperson_id = salesperson.id)  AS max_sale,  (SELECT customer_name    FROM all_sales    WHERE all_sales.salesperson_id = alesperson.id    AND all_sales.amount =        max_sale.amount)  AS max_sale_customer
+SELECT  salesperson.name,  (SELECT amount, customer_name    FROM all_sales    WHERE all_sales.salesperson_id = salesperson.id    ORDER BY amount DESC LIMIT 1) FROM  salesperson
+SELECT * FROM t1 WHERE column1 = (SELECT column1 FROM t2)
+SELECT * FROM t1  WHERE s1 IN (SELECT s1 FROM t1 UNION ALL SELECT s1 FROM t2)
+SELECT * FROM t1  WHERE s1 IN (SELECT s1 FROM t1) OR s1 IN (SELECT s1 FROM t2)
+SELECT (SELECT column1 + 5 FROM t1) FROM t2
+SELECT (SELECT column1 FROM t1) + 5 FROM t2
+SELECT * FROM t1       WHERE s1 NOT IN (SELECT s2 FROM t2 ORDER BY s1 LIMIT 1)
+SELECT * FROM AP_CLAIM_CHANGE_HX HX WHERE ((1=1 or 2=2) or ab=ab) 
+
+SELECT * FROM AP_CLAIM_CHANGE_HX HX WHERE (( UPPER(DEPLYMNT_DESC) LIKE '%NP%' AND CHANGE_HX_USER_ID NOT IN ( '161NCALTAP3','161NCALTAP1') ))
+select id , user_id , vims_id , my_Encrypt(vehicle_owner_name) , my_Encrypt(driving_card_url) , my_Encrypt(id_card_font_url) , id_card_back_url , own_status , del_status , create_time , update_time , reserve1 , reserve2 , reserve3 , reserve4 , reserve5 , suc_time , apply_time , revoke_time , vehicle_license_home_page_url , vehicle_license_vice_page_url , vehicle_owner_type , vehicle_attach_protocol_url , vehicle_attach_protocol_ex_url , vehicle_attach_protocol_url2 , vehicle_attach_protocol_url3 , business_license_url  from ads_bigdata.tt_mobile_user_truck_owner_base

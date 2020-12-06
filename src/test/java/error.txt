@@ -1,0 +1,2 @@
+SELECT _utf8 0x4D7953514C COLLATE utf8_danish_ci
+SELECT * FROM (t1, t2) JOIN t3 ON (t1.i1 = t3.i3)
