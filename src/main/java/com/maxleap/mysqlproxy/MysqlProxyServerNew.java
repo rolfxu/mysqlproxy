@@ -1,8 +1,25 @@
 package com.maxleap.mysqlproxy;
 
-import com.maxleap.mysqlproxy.decoder.MyDecoder;
+import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.concurrent.CompletionStage;
+
+import com.maxleap.mysqlproxy.async.pool.ChannelConnector;
+import com.maxleap.mysqlproxy.async.pool.ChannelConnectorImpl;
+import com.maxleap.mysqlproxy.async.pool.MysqlHandler;
+import com.maxleap.mysqlproxy.async.pool.NettyChannelPool;
+import com.maxleap.mysqlproxy.async.pool.NettyChannelPoolHandler;
+
+import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.pool.ChannelHealthChecker;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -10,10 +27,8 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetSocket;
-import io.vertx.core.net.impl.NetServerImpl;
 import io.vertx.core.net.impl.NetSocketImpl;
 import io.vertx.ext.dropwizard.DropwizardMetricsOptions;
 import io.vertx.mysqlclient.impl.protocol.CapabilitiesFlag;
@@ -21,12 +36,8 @@ import io.vertx.mysqlclient.impl.protocol.CommandType;
 import io.vertx.mysqlclient.impl.util.BufferUtils;
 import io.vertx.mysqlclient.impl.util.Native41Authenticator;
 
-import java.nio.charset.Charset;
-import java.security.Security;
-import java.util.Arrays;
-
-public class MysqlProxyServer {
-    private static final Logger logger = LoggerFactory.getLogger(MysqlProxyServer.class);
+public class MysqlProxyServerNew {
+    private static final Logger logger = LoggerFactory.getLogger(MysqlProxyServerNew.class);
 
     public static void main(String[] args) {
         Vertx.vertx(new VertxOptions().setMetricsOptions(
@@ -37,13 +48,24 @@ public class MysqlProxyServer {
     public static class MysqlProxyServerVerticle extends AbstractVerticle {
         private final int port = 3306;
         private final String mysqlHost = "localhost";
-
+        private  Bootstrap newBootstrap( EventLoopGroup eventLoopGroup )
+	    {
+	        Bootstrap bootstrap = new Bootstrap();
+	        bootstrap.group( eventLoopGroup );
+	        bootstrap.channel(  NioSocketChannel.class );
+	        bootstrap.option( ChannelOption.SO_KEEPALIVE, true );
+	        bootstrap.option( ChannelOption.SO_REUSEADDR, true );
+	        return bootstrap;
+	    }
         @Override
         public void start() throws Exception {
             NetServer netServer = vertx.createNetServer();//创建代理服务器
-            NetClient netClient = vertx.createNetClient();//创建连接mysql客户端
-            VertxChannelPool channelPool = new VertxChannelPool(netClient);
-           
+            InetSocketAddress address = new InetSocketAddress("localhost", 3306);
+    		ChannelConnector connector = new ChannelConnectorImpl();
+    		Bootstrap bootstrap = newBootstrap(new NioEventLoopGroup() );
+    		NettyChannelPoolHandler nettyChannelTracker = new NettyChannelPoolHandler(bootstrap.config().group().next());
+    		NettyChannelPool pool =    new NettyChannelPool( address, connector, bootstrap, nettyChannelTracker, ChannelHealthChecker.ACTIVE, 10,100 );
+            
             netServer.connectHandler(
                     socket->{
                         int status =0;
@@ -94,20 +116,31 @@ public class MysqlProxyServer {
                             @Override
                             public void handle(Buffer m) {
                                 if(status==1) {
-                                    for(;;){
-                                        NetSocket clientSocket=  channelPool.aquire();
+//                                    for(;;){
+//                                        NetSocket clientSocket=  channelPool.aquire();
+//
+//                                        System.out.println(clientSocket);
+//                                        if ( ((NetSocketImpl)clientSocket).channel().isActive() ){
+//                                            clientSocket.write(m);
+//                                            new MysqlProxyConnection(socket,clientSocket,channelPool).proxy();
+//                                            break;
+//                                        } else {
+//                                            System.out.println("the connection is closed");
+//                                        }
+//                                    }
+                                	CompletionStage<Channel> cs = pool.acquire();
+                                	cs.handle( (channel,error)->{
 
-                                        System.out.println(clientSocket);
-                                        if ( ((NetSocketImpl)clientSocket).channel().isActive() ){
-                                            clientSocket.write(m);
-                                            new MysqlProxyConnection(socket,clientSocket,channelPool).proxy();
-                                            break;
-                                        } else {
-                                            System.out.println("the connection is closed");
-                                        }
-                                    }
-
-
+                        				if( error!=null ) {
+                        					error.printStackTrace();
+                        					return null;
+                        				}
+                        				
+                        				new MysqlProxyConnection(socket,channel,pool).proxy();
+                        				channel.writeAndFlush(m.getByteBuf());
+                        			
+                        				return channel;
+                        			} );
                                 } else {
                                     ByteBuf msg = ((Buffer)m).getByteBuf();
 //                                    System.out.println(ByteBufUtil.prettyHexDump( msg ));
@@ -127,14 +160,13 @@ public class MysqlProxyServer {
                                     } else {
                                         Buffer buf = Buffer.buffer();
                                         buf.appendBytes(new byte[]{(byte)0xff});
-                                        System.out.println( ((NetSocketImpl)socket).remoteAddress() );
                                         String str="#28000Access denied for user 'root'@'localhost' (using password: YES)";
                                         buf.appendShort((short) str.length() );
                                         buf.appendString(str);
                                         response.appendMediumLE(buf.length());
                                         response.appendByte((byte) 2);
                                         response.appendBuffer(buf);
-			System.out.println(ByteBufUtil.prettyHexDump(response.getByteBuf()));
+//			System.out.println("s-c:"+ByteBufUtil.prettyHexDump(response.getByteBuf()));
                                         socket.write(response);
                                         socket.close();
                                     }
@@ -176,39 +208,32 @@ public class MysqlProxyServer {
     }
 
     public static class MysqlProxyConnection {
-        private final NetSocket clientSocket;
+        private final Channel clientSocket;
         private final NetSocket serverSocket;
-        private final VertxChannelPool channelPool;
+        private final NettyChannelPool channelPool;
 
-        public MysqlProxyConnection(NetSocket serverSocket,NetSocket clientSocket, VertxChannelPool channelPool) {
+        public MysqlProxyConnection(NetSocket serverSocket,Channel clientSocket, NettyChannelPool channelPool) {
             this.clientSocket = clientSocket;
             this.serverSocket = serverSocket;
             this.channelPool = channelPool;
+            MysqlHandler handler = (MysqlHandler)clientSocket.pipeline().get("mysqlhandler");
+            handler.setServerSocket(serverSocket);
         }
 
         private void proxy() {
             //当代理与mysql服务器连接关闭时，关闭client与代理的连接
 //            serverSocket.closeHandler(v -> clientSocket.close());
-                serverSocket.closeHandler(v->channelPool.returnPool(clientSocket));
+                serverSocket.closeHandler(v->channelPool.release(clientSocket));
             //不管那端的连接出现异常时，关闭两端的连接
             serverSocket.exceptionHandler(e -> {
                 logger.error(e.getMessage(), e);
-                System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
                 close();
             });
-            clientSocket.exceptionHandler(e -> {
-                logger.error(e.getMessage(), e);
-                System.out.println("bbbbbbbbbbbbbbbbbbbbbbbbb");
-                close();
-            });
-            //当收到来自客户端的数据包时，转发给mysql目标服务器
-            clientSocket.handler(buffer -> {
-                System.out.println(">>>>>>>>>>>>>>>>>>>>>");
-                serverSocket.write(buffer);
-            });
+           
+             
             //当收到来自mysql目标服务器的数据包时，转发给客户端
             serverSocket.handler(buffer -> {
-//                System.out.println(ByteBufUtil.prettyHexDump(buffer.getByteBuf()));
+                
                 int pkgLength = buffer.getMediumLE(0);
                 int seqId = buffer.getByte(3);
                 int command = buffer.getByte(4);
@@ -217,7 +242,8 @@ public class MysqlProxyServer {
                     close();
                     return;
                 }
-                clientSocket.write(buffer);
+//                System.out.println(ByteBufUtil.prettyHexDump(buffer.getByteBuf()));
+                clientSocket.writeAndFlush(buffer.getByteBuf());
 
             });
         }
