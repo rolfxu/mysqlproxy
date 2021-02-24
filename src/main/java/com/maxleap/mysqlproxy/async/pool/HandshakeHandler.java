@@ -34,20 +34,20 @@ public class HandshakeHandler extends ChannelInboundHandlerAdapter {
     }
 	@Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception { 
-		
-    	ByteBuf buf = (ByteBuf) msg;
-    	System.out.println(ByteBufUtil.prettyHexDump(buf));
-    	if( (buf.getByte(4) & 0xff) != 0xff ) { 
-    		ctx.pipeline().remove(this);
-    		ctx.pipeline().addLast("mysqlhandler",new MysqlHandler(handshakeCompletedPromise,connectionInitialized));
-        	doHandShake(ctx, buf);
-        	handshakeCompletedPromise.setSuccess();
-        	ctx.fireChannelRead(msg);
-    	} else {
-    		ctx.close();
-    		ReferenceCountUtil.release(msg);
-    	}
-    	
+		ByteBuf buf = (ByteBuf) msg;
+		try {
+	    	if( (buf.getByte(4) & 0xff) != 0xff ) { 
+	    		ctx.pipeline().remove(this);
+	    		ctx.pipeline().addLast("mysqlhandler",new MysqlHandler(handshakeCompletedPromise,connectionInitialized));
+	        	doHandShake(ctx, buf);
+	        	handshakeCompletedPromise.setSuccess();
+	    	} else {
+	    		handshakeCompletedPromise.setFailure(new Exception("handshake error"));
+	    		ctx.close();
+	    	}
+		}finally {
+			buf.release();
+		}
     	
     }
 
@@ -55,8 +55,8 @@ public class HandshakeHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		System.out.println("meilianshang");
 		super.channelInactive(ctx);
+		ctx.close();
 	}
     private void doHandShake(ChannelHandlerContext ctx,ByteBuf buf)throws Exception { 
 //		System.out.println(ByteBufUtil.prettyHexDump(buf));
@@ -116,11 +116,12 @@ public class HandshakeHandler extends ChannelInboundHandlerAdapter {
     	 String authPluginName = BuffUtil.readString(buf);
 
     	 ByteBuf outMsg =  ctx.alloc().buffer();
+    	 try {
     	 long clientParam=0;
 //		  if (((serverCapabilities & MysqlFlags.CLIENT_COMPRESS) != 0) ) {
 //	          clientParam |= MysqlFlags.CLIENT_COMPRESS;
 //	      }
-		  String database = "es";
+		  String database = "azkaban";
 		  if((database != null) && (database.length() > 0)){
 			  clientParam |= CapabilitiesFlag.CLIENT_CONNECT_WITH_DB;
 		  }
@@ -183,12 +184,17 @@ public class HandshakeHandler extends ChannelInboundHandlerAdapter {
         
 //         System.out.println(ByteBufUtil.prettyHexDump(outPack));
     	 ctx.writeAndFlush(outPack);
+    	 }finally {
     	 outMsg.release();
+    	 }
     }
     
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
     		throws Exception {
+    	ctx.close();
+    	cause.printStackTrace();
+    	
     	super.exceptionCaught(ctx, cause);
     }
 	

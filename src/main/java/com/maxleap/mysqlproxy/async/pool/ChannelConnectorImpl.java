@@ -31,7 +31,7 @@ public class ChannelConnectorImpl implements ChannelConnector{
 	        // add timeout handler to the pipeline when channel is connected. it's needed to limit amount of time code
 	        // spends in TLS and Bolt handshakes. prevents infinite waiting when database does not respond
 	        channelConnected.addListener( future ->
-	                pipeline.addFirst( new ReadTimeoutHandler( 20 ) ) );
+	                pipeline.addFirst( new ReadTimeoutHandler( 5 ) ) );
 	        // add listener that sends Bolt handshake bytes when channel is connected
 	        channelConnected.addListener(
 	                new ChannelConnectedListener( address,  handshakeCompleted,channelConnected,connectionInitialized ) );

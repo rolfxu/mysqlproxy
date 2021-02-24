@@ -52,7 +52,6 @@ public class MysqlHandler implements Handler<Buffer> {
     public void handle(Buffer buffer) {
 
         ByteBuf in = buffer.getByteBuf();
-        System.out.println(ByteBufUtil.prettyHexDump(in));
 
 
         if (in.readableBytes() > 4) {

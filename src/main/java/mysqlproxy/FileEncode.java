@@ -34,7 +34,7 @@ public class FileEncode {
 						System.out.println(line);
 						continue a;
 					}
-					
+
 				} else {
 					newLine.append(columns[i]);
 				}

@@ -9,16 +9,16 @@ import com.maxleap.mysqlproxy.parser.BinaryOperator;
 import com.maxleap.mysqlproxy.parser.expression.BinaryExpression;
 import com.maxleap.mysqlproxy.parser.expression.Expression;
 
- 
+
 
 public class SqlParserUtils {
-	
-	
-	
+
+
+
 	public static Expression toTree(List<Expression> list) {
-		
+
 		LinkedToken linkedToken = new LinkedToken(list);
-		
+
 		for (;;) {
 			Token h = linkedToken.highest();
 			if(h==null) {
@@ -27,8 +27,8 @@ public class SqlParserUtils {
 			Op op = new Op(h.o, ImmutableList.of(h.previous,h.next));
 			linkedToken.replace(op, h.previous.previous, h.next.next);
 		}
-		
-		
+
+
 		Expression e =convert(linkedToken.first);
 		return e;
 	}
@@ -44,7 +44,7 @@ public class SqlParserUtils {
 			return t.o;
 		}
 	}
-	
+
 	public static class LinkedToken {
 		private Token first;
 		private Token last;
@@ -63,7 +63,7 @@ public class SqlParserUtils {
 		    }
 		    last = p;
 		}
-		
+
 		private void replace(Token t, Token previous, Token next) {
 		    t.previous = previous;
 		    t.next = next;
@@ -78,10 +78,10 @@ public class SqlParserUtils {
 		      next.previous = t;
 		    }
 		  }
-		
+
 		private Token highest() {
 		    Token highest = null;
-		    for (Token t = first; 
+		    for (Token t = first;
 		    		t != null;
 		    		t = t.next) {
 		    	if((t instanceof Op) ) {
@@ -99,22 +99,22 @@ public class SqlParserUtils {
 		    return highest;
 		  }
 
-		
+
 	}
-	
-	
+
+
 	public static class Op extends Token{
 
 		ImmutableList<Token> args;
-		
+
 		public Op(Expression o,ImmutableList<Token> args) {
 			super(o);
 			this.args = args;
 		}
-		
+
 	}
-	
-	
+
+
 	public static class Token implements Cloneable{
 	    Token previous;
 	    Token next;
@@ -136,5 +136,5 @@ public class SqlParserUtils {
 	    }
 
 	  }
-	
+
 }

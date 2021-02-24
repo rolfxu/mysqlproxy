@@ -7,13 +7,19 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.pool.FixedChannelPool;
+import io.netty.util.internal.PlatformDependent;
  
 
 public class NettyChannelPool implements ExtendedChannelPool
@@ -21,20 +27,21 @@ public class NettyChannelPool implements ExtendedChannelPool
     /**
      * Unlimited amount of parties are allowed to request channels from the pool.
      */
-    private static final int MAX_PENDING_ACQUIRES = Integer.MAX_VALUE;
+    private static final int MAX_PENDING_ACQUIRES = 10000;
     /**
      * Do not check channels when they are returned to the pool.
      */
-    private static final boolean RELEASE_HEALTH_CHECK = false;
+    private static final boolean RELEASE_HEALTH_CHECK = true;
 
     private final FixedChannelPool delegate;
     private final AtomicBoolean closed = new AtomicBoolean( false );
     private final String id;
     private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
-
-    public NettyChannelPool(  InetSocketAddress address, ChannelConnector connector, Bootstrap bootstrap, NettyChannelPoolHandler handler,
+    private MetricRegistry registry;
+    public <T> NettyChannelPool(  InetSocketAddress address, ChannelConnector connector, Bootstrap bootstrap, NettyChannelPoolHandler handler,
             ChannelHealthChecker healthCheck, long acquireTimeoutMillis, int maxConnections )
     {
+    	
         requireNonNull( address );
         requireNonNull( connector );
         requireNonNull( handler );
@@ -53,6 +60,7 @@ public class NettyChannelPool implements ExtendedChannelPool
                         Channel channel = channelFuture.channel();
                         ChannelAttributes.setPoolId( channel, id );
                         handler.channelCreated( channel );
+                        
                     }
                     else
                     {
@@ -62,6 +70,22 @@ public class NettyChannelPool implements ExtendedChannelPool
                 return channelFuture;
             }
         };
+        registry = new MetricRegistry();
+        registry.register("queue.queuecount", new Gauge<String>() {
+        	@Override
+        	public String getValue() {
+//        		for(Channel c:NettyChannelPool.this.delegate.getDeque()) {
+//        			System.out.println(c.isOpen()+"-"+c.isActive()+"/"+c);
+//        		}
+        		
+        		return PlatformDependent.usedDirectMemory()+"/"+PlatformDependent.maxDirectMemory();
+        	}
+		} );
+        ConsoleReporter reporter = ConsoleReporter.forRegistry(registry)
+                .convertRatesTo(TimeUnit.SECONDS)
+                .convertDurationsTo(TimeUnit.MILLISECONDS)
+                .build();
+        reporter.start(5, TimeUnit.SECONDS);
     }
 
     @Override

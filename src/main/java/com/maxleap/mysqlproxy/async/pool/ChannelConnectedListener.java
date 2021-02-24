@@ -37,13 +37,11 @@ public class ChannelConnectedListener implements ChannelFutureListener {
 			ChannelPipeline pipeline = channel.pipeline();
 			pipeline.remove(ReadTimeoutHandler.class);
             pipeline.addLast( new HandshakeHandler(  handshakeCompletedPromise,connectionInitialized ) );
-            channel.writeAndFlush( handshakeBuf(), channel.voidPromise() );
+//            channel.writeAndFlush( handshakeBuf(), channel.voidPromise() );
 		 } else {
-			 handshakeCompletedPromise.setFailure(  future.cause()  );
+			 future.cause().printStackTrace();
+			 connectionInitialized.setFailure(  future.cause()  );
 		 }
 	}
 
-	private ByteBuf handshakeBuf() {
-		return null;
-	}
 }

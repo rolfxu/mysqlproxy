@@ -16,15 +16,15 @@ import io.netty.channel.pool.ChannelHealthChecker;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 public class TestPool {
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		 
 		InetSocketAddress address = new InetSocketAddress("localhost", 3306);
 		ChannelConnector connector = new ChannelConnectorImpl();
 		Bootstrap bootstrap = newBootstrap(new NioEventLoopGroup() );
 		NettyChannelPoolHandler nettyChannelTracker = new NettyChannelPoolHandler(bootstrap.config().group().next());
 		NettyChannelPool pool =    new NettyChannelPool( address, connector, bootstrap, nettyChannelTracker, ChannelHealthChecker.ACTIVE, 10,100 );
-		for(int i=0;i<1000;i++) {
-			
+		for(;;) {
+			Thread.sleep(100l);
 			CompletionStage<Channel> cs = pool.acquire();
 			cs.handle( (channel,error)->{
 
@@ -32,6 +32,7 @@ public class TestPool {
 					error.printStackTrace();
 				}
 				
+				channel.close();
 				pool.release(channel);
 				return channel;
 			} );
